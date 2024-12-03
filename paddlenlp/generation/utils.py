@@ -1213,14 +1213,18 @@ class GenerationMixin(object):
             if top_k is not None and top_k != 0:
                 probs = TopKProcess(probs, top_k, min_tokens_to_keep)
             if top_p is not None and top_p < 1.0:
-                probs = TopPProcess(probs, top_p, min_tokens_to_keep)
+                # Note:(changwenbin) use'paddle.tensor.top_p_sampling' to fix top_p bug
+                top_p = paddle.to_tensor(top_p)
+                _,next_tokens = paddle.tensor.top_p_sampling(probs, top_p)
+                # probs = TopPProcess(probs, top_p, min_tokens_to_keep)
             if paddle.device.is_compiled_with_custom_device("gcu"):
                 probs = paddle.cast(probs, "float32")
             if paddle.device.is_compiled_with_xpu():
                 probs = paddle.cast(probs, "float32")
 
+            # Note:(changwenbin) use'paddle.tensor.top_p_sampling' to fix top_p bug
             # multinomial already support fp16 and bf16 currently, fix issue: https://github.com/PaddlePaddle/Paddle/issues/51852
-            next_tokens = paddle.multinomial(probs)
+            # next_tokens = paddle.multinomial(probs)
 
             if self.config.tensor_parallel_degree > 1:
                 # Maybe no need to broadcast if seed is set correclty.
