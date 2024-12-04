@@ -1280,10 +1280,11 @@ class Qwen2BlockInferenceModel(Qwen2InferenceModel):
         kwargs["padding_offsets"] = padding_offset
         kwargs["max_input_length"] = self.max_seq_len
 
-        if input_ids.shape[0] > 1 or input_ids.shape[1] > 1:
-            inputs_embeds = inputs_embeds.reshape([-1, 1536])
-        else:
+        if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(ids_remove_padding)
+        else:
+            inputs_embeds = inputs_embeds.reshape([-1, 1536])
+
 
         with dy2st_nocheck_guard_context():
             hidden_states, _ = self.transformer_block(
