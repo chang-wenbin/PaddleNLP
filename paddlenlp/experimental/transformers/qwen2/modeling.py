@@ -1283,7 +1283,7 @@ class Qwen2BlockInferenceModel(Qwen2InferenceModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(ids_remove_padding)
         else:
-            inputs_embeds = inputs_embeds.reshape([-1, 1536])
+            inputs_embeds = inputs_embeds.reshape([inputs_embeds.shape[1], inputs_embeds.shape[2]])
 
 
         with dy2st_nocheck_guard_context():
