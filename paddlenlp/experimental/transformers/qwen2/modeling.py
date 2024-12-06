@@ -1292,7 +1292,11 @@ class Qwen2BlockInferenceModel(Qwen2InferenceModel):
         if inputs_embeds is None:
             inputs_embeds = self.embed_tokens(ids_remove_padding)
         else:
-            inputs_embeds = inputs_embeds.reshape([inputs_embeds.shape[1], inputs_embeds.shape[2]])
+            assert len(inputs_embeds.shape) == 3
+            # This is the case in the image-to-text model such as qwen2-vl,
+            # In the prefill phase, the language model is first fed with inputs_embeds instead of input_ids
+            # but in decoder phase, the language model is fed with input_ids just like normal text-to-text model.
+            inputs_embeds = inputs_embeds.reshape([-1, inputs_embeds.shape[2]])
 
         with dy2st_nocheck_guard_context():
             hidden_states, _ = self.transformer_block(
