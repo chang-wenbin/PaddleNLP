@@ -1523,8 +1523,8 @@ class Qwen2ForCausalLMBlockInferenceModel(GenerationBlockInferenceModel, Qwen2Pr
 
     @paddle.no_grad()
     def set_state_dict(self, state_dict):
-        if "embed_tokens.weight" in state_dict:
+        if "lm_head.weight" in state_dict:
             self.lm_head.weight.set_value(
-                paddle.to_tensor(state_dict["embed_tokens.weight"]).cast(self.lm_head.weight.dtype)
+                paddle.to_tensor(state_dict["lm_head.weight"]).cast(self.lm_head.weight.dtype)
             )
         self.qwen2.set_state_dict({k: state_dict[k] for k in state_dict.keys()})
