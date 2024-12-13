@@ -1067,6 +1067,14 @@ class FusedMultiTransformerBase(Layer):
         residual_input = src
         for i in range(self.num_layers):
             qkv_out, residual_input = self.compute_qkv(src, residual_input, i)
+
+            import paddle
+
+            to_file = "/root/tmp/rotary.pdparams"
+            state_dict = paddle.load(to_file, return_numpy=False)
+            rotary_embs = state_dict["inputs_embeds"].cast("float32")
+            # print(rotary_embs.shape)
+
             out_linear_out = self.compute_attn(
                 time_step,
                 qkv_out,
