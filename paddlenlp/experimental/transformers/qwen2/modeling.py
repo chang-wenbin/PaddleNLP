@@ -560,27 +560,25 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
         self.transformer_block.init_weight()
         split_fn = split_param_func()
         self.embed_tokens.weight.set_value(
-            paddle.to_tensor(state_dict["{}.embed_tokens.weight".format(key_prefix)]).cast(
-                self.embed_tokens.weight.dtype
-            )
+            paddle.to_tensor(state_dict[f"{key_prefix}.embed_tokens.weight"]).cast(self.embed_tokens.weight.dtype)
         )
         self.norm.weight.set_value(
-            paddle.to_tensor(state_dict["{}.norm.weight".format(key_prefix)]).cast(self.norm.weight.dtype)
+            paddle.to_tensor(state_dict[f"{key_prefix}.norm.weight"]).cast(self.norm.weight.dtype)
         )
 
         for idx in range(self.num_layers):
             logger.info(f"set state for layer {idx}")
 
-            ln_scale = paddle.to_tensor(
-                state_dict["{}.layers.{}.input_layernorm.weight".format(key_prefix, idx)]
-            ).cast(self.transformer_block.ln_scales[idx].dtype)
+            ln_scale = paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.input_layernorm.weight"]).cast(
+                self.transformer_block.ln_scales[idx].dtype
+            )
             self.transformer_block.ln_scales[idx].set_value(ln_scale)
 
-            if "{}.layers.{}.self_attn.qkv_proj.weight".format(key_prefix, idx) in state_dict.keys():
+            if f"{key_prefix}.layers.{idx}.self_attn.qkv_proj.weight" in state_dict.keys():
                 concated_qkv_weight = paddle.to_tensor(
                     np.concatenate(
                         split_fn(
-                            state_dict["{}.layers.{}.self_attn.qkv_proj.weight".format(key_prefix, idx)],
+                            state_dict[f"{key_prefix}.layers.{idx}.self_attn.qkv_proj.weight"],
                             is_qkv=True,
                             num_heads=self.num_attention_heads // self.config.tensor_parallel_degree,
                             num_key_value_heads=self.num_key_value_heads // self.config.tensor_parallel_degree,
@@ -591,13 +589,13 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
             else:
                 unfused_state_dict = {}
                 unfused_state_dict["self_attn.q_proj.weight"] = paddle.to_tensor(
-                    state_dict["{}.layers.{}.self_attn.q_proj.weight".format(key_prefix, idx)]
+                    state_dict[f"{key_prefix}.layers.{idx}.self_attn.q_proj.weight"]
                 )
                 unfused_state_dict["self_attn.k_proj.weight"] = paddle.to_tensor(
-                    state_dict["{}.layers.{}.self_attn.k_proj.weight".format(key_prefix, idx)]
+                    state_dict[f"{key_prefix}.layers.{idx}.self_attn.k_proj.weight"]
                 )
                 unfused_state_dict["self_attn.v_proj.weight"] = paddle.to_tensor(
-                    state_dict["{}.layers.{}.self_attn.v_proj.weight".format(key_prefix, idx)]
+                    state_dict[f"{key_prefix}.layers.{idx}.self_attn.v_proj.weight"]
                 )
                 if "fp8" in self.quant_type:
                     q_wgt_scale = self.transformer_block.weight_scales["q_weight_scale"][idx]
@@ -671,21 +669,21 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
             else:
                 self.transformer_block.qkv_weights[idx].set_value(qkv_weight)
 
-            unfused_state_dict["{}.self_attn.q_proj.bias".format(key_prefix)] = state_dict[
-                "{}.layers.{}.self_attn.q_proj.bias".format(key_prefix, idx)
+            unfused_state_dict[f"{key_prefix}.self_attn.q_proj.bias"] = state_dict[
+                f"{key_prefix}.layers.{idx}.self_attn.q_proj.bias"
             ]
-            unfused_state_dict["{}.self_attn.k_proj.bias".format(key_prefix)] = state_dict[
-                "{}.layers.{}.self_attn.k_proj.bias".format(key_prefix, idx)
+            unfused_state_dict[f"{key_prefix}.self_attn.k_proj.bias"] = state_dict[
+                f"{key_prefix}.layers.{idx}.self_attn.k_proj.bias"
             ]
-            unfused_state_dict["{}.self_attn.v_proj.bias".format(key_prefix)] = state_dict[
-                "{}.layers.{}.self_attn.v_proj.bias".format(key_prefix, idx)
+            unfused_state_dict[f"{key_prefix}.self_attn.v_proj.bias"] = state_dict[
+                f"{key_prefix}.layers.{idx}.self_attn.v_proj.bias"
             ]
 
             concated_qkv_biases = np.concatenate(
                 [
-                    unfused_state_dict["{}.self_attn.q_proj.bias".format(key_prefix)],
-                    unfused_state_dict["{}.self_attn.k_proj.bias".format(key_prefix)],
-                    unfused_state_dict["{}.self_attn.v_proj.bias".format(key_prefix)],
+                    unfused_state_dict[f"{key_prefix}.self_attn.q_proj.bias"],
+                    unfused_state_dict[f"{key_prefix}.self_attn.k_proj.bias"],
+                    unfused_state_dict[f"{key_prefix}.self_attn.v_proj.bias"],
                 ],
                 axis=-1,
             )
@@ -694,9 +692,9 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                 qkv_bias.cast(self.transformer_block.qkv_biases[idx].dtype)
             )
 
-            linear_weight = paddle.to_tensor(
-                state_dict["{}.layers.{}.self_attn.o_proj.weight".format(key_prefix, idx)]
-            ).cast(paddle.get_default_dtype())
+            linear_weight = paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.weight"]).cast(
+                paddle.get_default_dtype()
+            )
             if self.use_weight_only:
                 linear_quanted_weight, linear_weight_scale = weight_quantize(linear_weight, algo=self.quant_algo)
                 self.transformer_block.linear_weights[idx].set_value(linear_quanted_weight)
@@ -704,9 +702,9 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
             elif "fp8" in self.quant_type:
                 self.transformer_block.linear_weights[idx].copy_(
                     paddle.cast(
-                        paddle.to_tensor(
-                            state_dict["{}.layers.{}.self_attn.o_proj.weight".format(key_prefix, idx)]
-                        ).transpose((1, 0)),
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.weight"]).transpose(
+                            (1, 0)
+                        ),
                         "float8_e4m3fn",
                     ),
                     False,
@@ -720,9 +718,7 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                 if paddle.is_compiled_with_rocm():
                     self.transformer_block.linear_weights[idx].set_value(
                         paddle.cast(
-                            paddle.to_tensor(
-                                state_dict["{}.layers.{}.self_attn.o_proj.weight".format(key_prefix, idx)]
-                            ),
+                            paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.weight"]),
                             w_dtype,
                         )
                     )
@@ -730,7 +726,7 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                     self.transformer_block.linear_weights[idx].set_value(
                         paddle.cast(
                             paddle.to_tensor(
-                                state_dict["{}.layers.{}.self_attn.o_proj.weight".format(key_prefix, idx)]
+                                state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.weight"]
                             ).transpose((1, 0)),
                             w_dtype,
                         )
@@ -741,24 +737,22 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                 )
 
             ffn_ln_scale = paddle.to_tensor(
-                state_dict["{}.layers.{}.post_attention_layernorm.weight".format(key_prefix, idx)],
+                state_dict[f"{key_prefix}.layers.{idx}.post_attention_layernorm.weight"],
             )
 
             self.transformer_block.ffn_ln_scales[idx].set_value(
                 ffn_ln_scale.cast(self.transformer_block.ffn_ln_scales[idx].dtype)
             )
 
-            if "{}.layers.{}.mlp.gate_up_fused_proj.weight".format(key_prefix, idx) in state_dict.keys():
+            if f"{key_prefix}.layers.{idx}.mlp.gate_up_fused_proj.weight" in state_dict.keys():
                 concated_ffn1_weight = np.concatenate(
-                    split_fn(state_dict["{}.layers.{}.mlp.gate_up_fused_proj.weight".format(key_prefix, idx)]), axis=-1
+                    split_fn(state_dict[f"{key_prefix}.layers.{idx}.mlp.gate_up_fused_proj.weight"]), axis=-1
                 )
             else:
                 unfused_state_dict["mlp.gate_proj.weight"] = state_dict[
-                    "{}.layers.{}.mlp.gate_proj.weight".format(key_prefix, idx)
+                    f"{key_prefix}.layers.{idx}.mlp.gate_proj.weight"
                 ]
-                unfused_state_dict["mlp.up_proj.weight"] = state_dict[
-                    "{}.layers.{}.mlp.up_proj.weight".format(key_prefix, idx)
-                ]
+                unfused_state_dict["mlp.up_proj.weight"] = state_dict[f"{key_prefix}.layers.{idx}.mlp.up_proj.weight"]
                 concated_ffn1_weight = np.concatenate(
                     [unfused_state_dict["mlp.gate_proj.weight"], unfused_state_dict["mlp.up_proj.weight"]], axis=-1
                 )
@@ -798,14 +792,14 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                     ffn1_weight.cast(self.transformer_block.ffn1_weights[idx].dtype)
                 )
 
-            ffn2_weight = paddle.to_tensor(state_dict["{}.layers.{}.mlp.down_proj.weight".format(key_prefix, idx)])
+            ffn2_weight = paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.weight"])
             if self.use_weight_only:
                 ffn2_quanted_weight, ffn2_weight_scale = weight_quantize(ffn2_weight, algo=self.quant_algo)
                 self.transformer_block.ffn2_weights[idx].set_value(ffn2_quanted_weight)
                 self.transformer_block.ffn2_weights_scale[idx].set_value(ffn2_weight_scale)
             elif "fp8" in self.quant_type:
                 self.transformer_block.ffn2_weights[idx].copy_(
-                    paddle.to_tensor(state_dict["{}.layers.{}.mlp.down_proj.weight".format(key_prefix, idx)])
+                    paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.weight"])
                     .transpose([1, 0])
                     .cast("float8_e4m3fn"),
                     False,
@@ -828,65 +822,59 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
             if "fp8" not in self.quant_type and "a8w8" in self.quant_type:
                 if self.shift_smooth_all_linears:
                     if self.use_fake_parameter:
-                        if "{}.layers.{}.self_attn.o_proj.shift_bias".format(key_prefix, idx) not in state_dict:
-                            state_dict[
-                                "{}.layers.{}.self_attn.o_proj.shift_bias".format(key_prefix, idx)
-                            ] = paddle.zeros(
+                        if f"{key_prefix}.layers.{idx}.self_attn.o_proj.shift_bias" not in state_dict:
+                            state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.shift_bias"] = paddle.zeros(
                                 shape=[
                                     (self.num_attention_heads // self.config.tensor_parallel_degree)
                                     * (self.hidden_size // self.num_attention_heads)
                                 ],
                                 dtype=paddle.get_default_dtype(),
                             )
-                            state_dict[
-                                "{}.layers.{}.self_attn.o_proj.smooth_weight".format(key_prefix, idx)
-                            ] = paddle.ones(
+                            state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.smooth_weight"] = paddle.ones(
                                 shape=[
                                     (self.num_attention_heads // self.config.tensor_parallel_degree)
                                     * (self.hidden_size // self.num_attention_heads)
                                 ],
                                 dtype=paddle.get_default_dtype(),
                             )
-                            state_dict["{}.layers.{}.mlp.down_proj.shift_bias".format(key_prefix, idx)] = paddle.zeros(
+                            state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.shift_bias"] = paddle.zeros(
                                 shape=[self.intermediate_size // self.config.tensor_parallel_degree],
                                 dtype=paddle.get_default_dtype(),
                             )
-                            state_dict[
-                                "{}.layers.{}.mlp.down_proj.smooth_weight".format(key_prefix, idx)
-                            ] = paddle.ones(
+                            state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.smooth_weight"] = paddle.ones(
                                 shape=[self.intermediate_size // self.config.tensor_parallel_degree],
                                 dtype=paddle.get_default_dtype(),
                             )
                     self.transformer_block.linear_shifts[idx].set_value(
-                        paddle.to_tensor(
-                            state_dict["{}.layers.{}.self_attn.o_proj.shift_bias".format(key_prefix, idx)]
-                        ).astype(paddle.get_default_dtype())
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.shift_bias"]).astype(
+                            paddle.get_default_dtype()
+                        )
                     )
                     self.transformer_block.linear_smooths[idx].set_value(
                         paddle.to_tensor(
-                            state_dict["{}.layers.{}.self_attn.o_proj.smooth_weight".format(key_prefix, idx)]
+                            state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.smooth_weight"]
                         ).astype(paddle.get_default_dtype())
                     )
                     self.transformer_block.ffn2_shifts[idx].set_value(
-                        paddle.to_tensor(
-                            state_dict["{}.layers.{}.mlp.down_proj.shift_bias".format(key_prefix, idx)]
-                        ).astype(paddle.get_default_dtype())
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.shift_bias"]).astype(
+                            paddle.get_default_dtype()
+                        )
                     )
                     self.transformer_block.ffn2_smooths[idx].set_value(
-                        paddle.to_tensor(
-                            state_dict["{}.layers.{}.mlp.down_proj.smooth_weight".format(key_prefix, idx)]
-                        ).astype(paddle.get_default_dtype())
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.smooth_weight"]).astype(
+                            paddle.get_default_dtype()
+                        )
                     )
 
                 if self.shift:
                     if self.use_fake_parameter:
-                        if "{}.layers.{}.input_layernorm.bias".format(key_prefix, idx) not in state_dict:
-                            state_dict["{}.layers.{}.input_layernorm.bias".format(key_prefix, idx)] = paddle.zeros(
+                        if f"{key_prefix}.layers.{idx}.input_layernorm.bias" not in state_dict:
+                            state_dict[f"{key_prefix}.layers.{idx}.input_layernorm.bias"] = paddle.zeros(
                                 shape=[self.hidden_size], dtype=paddle.get_default_dtype()
                             )
-                            state_dict[
-                                "{}.layers.{}.post_attention_layernorm.bias".format(key_prefix, idx)
-                            ] = paddle.zeros([self.hidden_size], dtype=paddle.get_default_dtype())
+                            state_dict[f"{key_prefix}.layers.{idx}.post_attention_layernorm.bias"] = paddle.zeros(
+                                [self.hidden_size], dtype=paddle.get_default_dtype()
+                            )
                             unfused_state_dict["self_attn.q_proj.bias"] = paddle.zeros(
                                 shape=[self.num_attention_heads * (self.hidden_size // self.num_attention_heads)],
                                 dtype=paddle.get_default_dtype(),
@@ -907,28 +895,26 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                             )
                     else:
                         unfused_state_dict["self_attn.q_proj.bias"] = state_dict[
-                            "{}.layers.{}.self_attn.q_proj.bias".format(key_prefix, idx)
+                            f"{key_prefix}.layers.{idx}.self_attn.q_proj.bias"
                         ]
                         unfused_state_dict["self_attn.k_proj.bias"] = state_dict[
-                            "{}.layers.{}.self_attn.k_proj.bias".format(key_prefix, idx)
+                            f"{key_prefix}.layers.{idx}.self_attn.k_proj.bias"
                         ]
                         unfused_state_dict["self_attn.v_proj.bias"] = state_dict[
-                            "{}.layers.{}.self_attn.v_proj.bias".format(key_prefix, idx)
+                            f"{key_prefix}.layers.{idx}.self_attn.v_proj.bias"
                         ]
                         unfused_state_dict["mlp.gate_proj.bias"] = state_dict[
-                            "{}.layers.{}.mlp.gate_proj.bias".format(key_prefix, idx)
+                            f"{key_prefix}.layers.{idx}.mlp.gate_proj.bias"
                         ]
                         unfused_state_dict["mlp.up_proj.bias"] = state_dict[
-                            "{}.layers.{}.mlp.up_proj.bias".format(key_prefix, idx)
+                            f"{key_prefix}.layers.{idx}.mlp.up_proj.bias"
                         ]
 
                     self.transformer_block.ln_biases[idx].set_value(
-                        paddle.to_tensor(state_dict["{}.layers.{}.input_layernorm.bias".format(key_prefix, idx)])
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.input_layernorm.bias"])
                     )
                     self.transformer_block.ffn_ln_biases[idx].set_value(
-                        paddle.to_tensor(
-                            state_dict["{}.layers.{}.post_attention_layernorm.bias".format(key_prefix, idx)]
-                        )
+                        paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.post_attention_layernorm.bias"])
                     )
                     concated_qkv_biases = np.concatenate(
                         [
@@ -947,20 +933,18 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
 
                     if self.shift_smooth_all_linears:
                         if self.use_fake_parameter:
-                            if "{}.layers.{}.self_attn.o_proj.bias".format(key_prefix, idx) not in state_dict:
-                                state_dict[
-                                    "{}.layers.{}.self_attn.o_proj.bias".format(key_prefix, idx)
-                                ] = paddle.zeros([self.hidden_size], dtype=paddle.get_default_dtype())
-                                state_dict[
-                                    "{}.layers.{}.mlp.down_proj.layer.bias".format(key_prefix, idx)
-                                ] = paddle.zeros([self.hidden_size], dtype=paddle.get_default_dtype())
+                            if f"{key_prefix}.layers.{idx}.self_attn.o_proj.bias" not in state_dict:
+                                state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.bias"] = paddle.zeros(
+                                    [self.hidden_size], dtype=paddle.get_default_dtype()
+                                )
+                                state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.layer.bias"] = paddle.zeros(
+                                    [self.hidden_size], dtype=paddle.get_default_dtype()
+                                )
                         self.transformer_block.linear_biases[idx].set_value(
-                            paddle.to_tensor(state_dict["{}.layers.{}.self_attn.o_proj.bias".format(key_prefix, idx)])
+                            paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.self_attn.o_proj.bias"])
                         )
                         self.transformer_block.ffn2_biases[idx].set_value(
-                            paddle.to_tensor(
-                                state_dict["{}.layers.{}.mlp.down_proj.layer.bias".format(key_prefix, idx)]
-                            )
+                            paddle.to_tensor(state_dict[f"{key_prefix}.layers.{idx}.mlp.down_proj.layer.bias"])
                         )
 
     def remove_padding(self, input_ids, seq_lens_this_time):
