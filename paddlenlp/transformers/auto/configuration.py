@@ -231,6 +231,8 @@ class _LazyConfigMapping(OrderedDict):
         self._modules = {}
 
     def __getitem__(self, key):
+        if key == "qwen2_vl":
+            key = "qwen2"
         if key in self._extra_content:
             return self._extra_content[key]
         if key not in self._mapping:
