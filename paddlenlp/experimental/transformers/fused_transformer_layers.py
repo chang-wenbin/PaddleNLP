@@ -1064,16 +1064,21 @@ class FusedMultiTransformerBase(Layer):
                 self.config.speculate_config.speculate_max_draft_token_num,
             )
 
-        residual_input = src
+        # residual_input = src
+        # state_dict = {}
+        # state_dict["inputs_embeds"] = residual_input
+        # to_file = "/root/tmp/my.pdparams"
+        # paddle.save(state_dict, to_file)
+        # print(residual_input)
+        # breakpoint()
         for i in range(self.num_layers):
             qkv_out, residual_input = self.compute_qkv(src, residual_input, i)
 
-            import paddle
-
-            to_file = "/root/tmp/rotary.pdparams"
-            state_dict = paddle.load(to_file, return_numpy=False)
-            rotary_embs = state_dict["inputs_embeds"].cast("float32")
-            # print(rotary_embs.shape)
+            # import paddle
+            # to_file = "/root/tmp/rotary.pdparams"
+            # state_dict = paddle.load(to_file, return_numpy=False)
+            # rotary_embs = state_dict["inputs_embeds"].cast("float32")
+            # # print(rotary_embs.shape)
 
             out_linear_out = self.compute_attn(
                 time_step,
