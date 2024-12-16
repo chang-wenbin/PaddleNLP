@@ -1556,11 +1556,11 @@ class Qwen2ForCausalLMBlockInferenceModel(GenerationBlockInferenceModel, Qwen2Pr
 
 class Qwen2VLForConditionalGenerationBlockInferenceModel(Qwen2ForCausalLMBlockInferenceModel):
     """
-    This class inherits from Qwen2ForCausalLMBlockInferenceModel
+    NOTE: (changwenbin) This class inherits from Qwen2ForCausalLMBlockInferenceModel
     Used only for QWen2-VL's second part.
     """
 
-    # This function corresponds to QWen2-VL's second part, only used for QWen2-VL.
+    # NOTE: (changwenbin) This function corresponds to QWen2-VL's second part, only used for QWen2-VL.
     @paddle.no_grad()
     def set_state_dict(self, state_dict):
         if "lm_head.weight" in state_dict:
