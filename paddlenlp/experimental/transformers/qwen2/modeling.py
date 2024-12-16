@@ -553,7 +553,6 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                         self.transformer_block.cache_v_out_scales[i_layer].set_value(weight_scale)
 
     @paddle.no_grad()
-
     # NOTE: (changwenbin) The key_prefix parameter is to adapt to the different prefixes of weight keys in qwen2vl, and possible other prefixes later
     def set_state_dict(self, state_dict, key_prefix="qwen2"):
         self.set_quant_scale()
@@ -670,24 +669,11 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
             else:
                 self.transformer_block.qkv_weights[idx].set_value(qkv_weight)
 
-            unfused_state_dict[f"{key_prefix}.self_attn.q_proj.bias"] = state_dict[
-                f"{decoder_key_prefix}.self_attn.q_proj.bias"
-            ]
-            unfused_state_dict[f"{key_prefix}.self_attn.k_proj.bias"] = state_dict[
-                f"{decoder_key_prefix}.self_attn.k_proj.bias"
-            ]
-            unfused_state_dict[f"{key_prefix}.self_attn.v_proj.bias"] = state_dict[
-                f"{decoder_key_prefix}.self_attn.v_proj.bias"
-            ]
+            q_bias = state_dict[f"{decoder_key_prefix}.self_attn.q_proj.bias"]
+            k_bias = state_dict[f"{decoder_key_prefix}.self_attn.k_proj.bias"]
+            v_bias = state_dict[f"{decoder_key_prefix}.self_attn.v_proj.bias"]
 
-            concated_qkv_biases = np.concatenate(
-                [
-                    unfused_state_dict[f"{key_prefix}.self_attn.q_proj.bias"],
-                    unfused_state_dict[f"{key_prefix}.self_attn.k_proj.bias"],
-                    unfused_state_dict[f"{key_prefix}.self_attn.v_proj.bias"],
-                ],
-                axis=-1,
-            )
+            concated_qkv_biases = np.concatenate([q_bias, k_bias, v_bias], axis=-1)
             qkv_bias = paddle.to_tensor(concated_qkv_biases)
             self.transformer_block.qkv_biases[idx].set_value(
                 qkv_bias.cast(self.transformer_block.qkv_biases[idx].dtype)
