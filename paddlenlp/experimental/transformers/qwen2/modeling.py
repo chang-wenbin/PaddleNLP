@@ -553,7 +553,7 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
                         self.transformer_block.cache_v_out_scales[i_layer].set_value(weight_scale)
 
     @paddle.no_grad()
-    # NOTE: (changwenbin) The key_prefix parameter is to adapt to the different prefixes of weight keys in qwen2vl, and possible other prefixes later
+    # NOTE: (changwenbin) The key_prefix parameter is to adapt to the different prefixes of weight keys in qwen2vl, and possible other prefixes later.
     def set_state_dict(self, state_dict, key_prefix="qwen2"):
         self.set_quant_scale()
         self.transformer_block.init_weight()
@@ -1523,7 +1523,7 @@ class Qwen2ForCausalLMBlockInferenceModel(GenerationBlockInferenceModel, Qwen2Pr
 
 class Qwen2VLForConditionalGenerationBlockInferenceModel(Qwen2ForCausalLMBlockInferenceModel):
     """
-    NOTE: (changwenbin) This class inherits from Qwen2ForCausalLMBlockInferenceModel
+    NOTE: (changwenbin) This class inherits from Qwen2ForCausalLMBlockInferenceModel.
     Used only for QWen2-VL's second part.
     """
 

@@ -1067,7 +1067,6 @@ class FusedMultiTransformerBase(Layer):
         residual_input = src
         for i in range(self.num_layers):
             qkv_out, residual_input = self.compute_qkv(src, residual_input, i)
-
             out_linear_out = self.compute_attn(
                 time_step,
                 qkv_out,
