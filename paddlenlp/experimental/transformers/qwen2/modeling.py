@@ -1520,11 +1520,6 @@ class Qwen2VLForConditionalGenerationBlockInferenceModel(Qwen2ForCausalLMBlockIn
     """
 
     # NOTE: (changwenbin) This function corresponds to QWen2-VL's second part, only used for QWen2-VL.
-    @paddle.no_grad()
-    def set_state_dict(self, state_dict):
+    def __init__(self, config):
+        super().__init__(config)
         self.qwen2.base_model_prefix = "model"
-        if "lm_head.weight" in state_dict:
-            self.lm_head.weight.set_value(
-                paddle.to_tensor(state_dict["lm_head.weight"]).cast(self.lm_head.weight.dtype)
-            )
-        self.qwen2.set_state_dict({k: state_dict[k] for k in state_dict.keys()})
