@@ -1020,9 +1020,9 @@ class Qwen2InferenceModel(Qwen2PretrainedModel):
         if not is_decoder and pre_caches is not None:
             position_offset = 128
 
-        from paddlenlp_ops import fused_get_rotary_embedding
+        from paddlenlp_ops import f_fused_get_rotary_embedding
 
-        new_rope = fused_get_rotary_embedding(
+        new_rope = f_fused_get_rotary_embedding(
             input_ids, position_ids, self.head_dim_shape_tensor, position_offset, self.rope_theta, self.use_neox
         )
 
@@ -1239,7 +1239,7 @@ class Qwen2BlockInferenceModel(Qwen2InferenceModel):
             self.transformer_block = FusedBlockMultiTransformerFP8(transformer_config)
         else:
             self.transformer_block = FusedBlockMultiTransformer(transformer_config)
-
+            
     def remove_padding(self, input_ids, seq_lens_this_time, draft_tokens=None, seq_lens_encoder=None):
         cum_offsets_now = paddle.cumsum(self.max_seq_len - seq_lens_this_time)
         token_num = paddle.sum(seq_lens_this_time)
