@@ -5532,6 +5532,7 @@ class FusedBlockMultiTransformerFP8DynamicQuant(FusedBlockMultiTransformer):
                     routed_scaling_factor=1.0,  # 在noaux_tc中做了
                 )
             else:
+                # breakpoint()
                 from paddlenlp.ops.triton_ops.fused_moe import fused_moe
 
                 fused_moe_out = fused_moe(
